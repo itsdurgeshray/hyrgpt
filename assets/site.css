@@ -121,6 +121,12 @@ html.figma .plate img { visibility: visible !important; }
 html.figma .marquee-track { animation: none; }
 html.figma .nav, html.figma .mod-sticky, html.figma .roi-out { position: relative; top: auto; }
 html.figma .signal, html.figma .live i { animation: none; }
+/* figma import: a fixed 1440 frame with 80px side margins on every section */
+html.figma { --gut: 80px; }
+html.figma body { width: 1440px; min-width: 1440px; margin: 0 auto; overflow-x: visible; }
+html.figma .wrap, html.figma .nav-in { max-width: 1440px; }
+html.figma .hero-in { min-height: 720px; }
+html.figma .rheva { right: 0; }
 
 /* sections */
 .sec { padding-top: var(--sec); }
