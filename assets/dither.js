@@ -3,7 +3,9 @@
    image document. A canvas sits on top only while something moves (the first scan, the cursor lens, the
    module dissolve) and is hidden again afterwards. ?export renders those PNGs from this same code.
    Options (data-*): art "a|b", text, cell, mode "dark", warm 0-1, sun "cx,cy,r", spot "x,y,r",
-   edge "l,r,t,b", fade "t,r,b,l", pos "x,y", scale */
+   edge "l,r,t,b", fade "t,r,b,l", pos "x,y", scale
+   On a page with <html data-reveal>, the cursor lens swaps each drawing for its future twin
+   (assets/art/future/<art>.jpg) in the same colours, instead of lighting it up. */
 (() => {
   const BAYER = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,
     3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21].map(v => (v + .5) / 64);
@@ -30,6 +32,7 @@
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const EXPORT = /[?&]export\b/.test(location.search);
+  const REVEAL = document.documentElement.hasAttribute('data-reveal');
   const DPR = EXPORT ? 2 : Math.min(2, window.devicePixelRatio || 1);
   const bp = () => innerWidth < 640 ? 'sm' : innerWidth < 1024 ? 'md' : 'lg';
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -76,7 +79,10 @@
     key(i = 0) { return `${this.text ? 'wordmark' : this.names[i]}-${bp()}`; }
     async init() {
       if (this.text) await document.fonts.ready;
-      else this.maps0 = await Promise.all(this.names.map(n => loadImg(`assets/art/${n}.jpg`)));
+      else {
+        this.maps0 = await Promise.all(this.names.map(n => loadImg(`assets/art/${n}.jpg`)));
+        if (REVEAL) this.alts0 = await Promise.all(this.names.map(n => loadImg(`assets/art/future/${n}.jpg`).catch(() => null)));
+      }
       this.layout();
     }
     layout() {
@@ -97,6 +103,7 @@
       this.cv.width = Math.round(w * DPR); this.cv.height = Math.round(h * DPR);
       this.ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       this.maps = this.text ? [this.sampleText()] : this.maps0.map(i => this.sample(i));
+      this.alts = this.alts0 ? this.alts0.map(i => i && this.sample(i)) : null;
       this.ready = true;
     }
     sample(img) {
@@ -183,6 +190,8 @@
       const pk = this.p.k, lensR = 120 / cell, px = (this.p.x - ox) / cell, py = (this.p.y - oy) / cell;
       for (const b of this.buckets) b.length = 0;
       const hot = this.hot; hot.length = 0;
+      const alt = mode === 'fx' && this.alts && this.alts[this.idx], cover = this.cover || (this.cover = []);
+      cover.length = 0;
       for (let r = 0; r < rows; r++) {
         const ds = scanY - r, scanK = ds > 0 && ds < 7 ? Math.pow(1 - ds / 7, 1.4) : 0;
         if (mode === 'fx' && !scanK && (pk < .002 || Math.abs(r + .5 - py) > lensR)) continue;
@@ -191,6 +200,17 @@
           let k = 0;
           if (pk > .002) { const dd = Math.hypot(q + .5 - px, r + .5 - py); if (dd < lensR) k = smooth(0, 1, 1 - dd / lensR) * pk; }
           if (mode === 'fx' && !scanK && !k) continue;
+          const x = q * cell + cell / 2 + ox, y = r * cell + cell / 2 + oy;
+          if (alt && k) {
+            // reveal: inside the lens the twin replaces the drawing, its edge dissolving on the Bayer grid
+            if (BAYER[(r & 7) * 8 + (q & 7)] < smooth(0, .14, k)) {
+              cover.push(x, y);
+              const t = this.cellAt(alt, i, q, r, this.idx);
+              if (t) this.buckets[t[0]].push(x, y, cell * t[1]);
+              continue;
+            }
+            if (!scanK) continue;
+          }
           let flash = 0, c;
           if (mode === 'morph') {
             const th = BAYER[(r & 7) * 8 + (q & 7)];
@@ -198,9 +218,8 @@
             const e = 1 - Math.abs(m - th) / .07;
             if (e > 0 && c) flash = e;
           } else c = this.cellAt(B, i, q, r, this.idx);
-          const x = q * cell + cell / 2 + ox, y = r * cell + cell / 2 + oy;
           if (!c) {
-            if (k > .15) hot.push(x, y, cell * .16 * k);
+            if (k > .15 && !alt) hot.push(x, y, cell * .16 * k);
             continue;
           }
           let [idx, sz] = c;
@@ -214,9 +233,16 @@
         }
       }
       ctx.clearRect(0, 0, this.w, this.h);
+      if (cover.length) {
+        // hide the drawing beneath the lens with the colour of whatever the plate sits on
+        ctx.shadowColor = 'transparent'; ctx.fillStyle = this.bg(); ctx.beginPath();
+        for (let j = 0; j < cover.length; j += 2) ctx.rect(cover[j] - cell / 2 - .5, cover[j + 1] - cell / 2 - .5, cell + 1, cell + 1);
+        ctx.fill();
+      }
       // the glow is baked into the exported PNG, so no CSS filter is needed on the image
-      ctx.shadowColor = mode === 'rest' ? (dark ? 'rgba(250,96,51,.4)' : 'rgba(250,96,51,.28)') : 'transparent';
-      ctx.shadowBlur = mode === 'rest' ? (dark ? 8 : 6) * DPR : 0;
+      const glow = mode === 'rest' || alt;
+      ctx.shadowColor = glow ? (dark ? 'rgba(250,96,51,.4)' : 'rgba(250,96,51,.28)') : 'transparent';
+      ctx.shadowBlur = glow ? (dark ? 8 : 6) * DPR : 0;
       const paint = (arr, color) => {
         if (!arr.length) return;
         ctx.fillStyle = color; ctx.beginPath();
@@ -229,6 +255,13 @@
       };
       for (let j = 0; j < N; j++) paint(this.buckets[j], ramp[j]);
       paint(hot, HOT);
+    }
+    bg() {
+      for (let e = this.el; e; e = e.parentElement) {
+        const c = getComputedStyle(e).backgroundColor;
+        if (c && c !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(c)) return c;
+      }
+      return '#F8F5EF';
     }
     show(i) {
       if (i === this.idx) return;

@@ -80,6 +80,7 @@ p { text-wrap: pretty; }
 .plate.is-fx .plate-fx, .plate.is-moving .plate-fx { display: block; }
 .plate.is-moving img { visibility: hidden; }
 html.figma .plate-fx { display: none !important; }
+html[data-reveal] .plate-fx { filter: none; }   /* the reveal paints its own glow, only on the dots */
 html.figma .plate img { visibility: visible !important; }
 .signal { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: rgba(250, 96, 51, .35); box-shadow: 0 0 28px 10px rgba(250, 96, 51, .35); animation: pulse 2.8s ease-in-out infinite; pointer-events: none; }
 @keyframes pulse { 50% { box-shadow: 0 0 44px 18px rgba(250, 96, 51, .18); } }
