@@ -330,6 +330,8 @@ a:hover .more .ic { transform: translateX(3px); }
 .legal { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 28px 0 36px; border-top: 1px solid rgba(226, 214, 203, .14); font-size: 13px; color: rgba(226, 214, 203, .6); }
 .legal div { display: flex; gap: 24px; }
 .legal a:hover { color: var(--orange); }
+/* text links underline on hover only, so a Figma import never picks up a hidden underline */
+.cols a:hover, .legal a:hover, .drawer a:not(.btn):hover, a:hover .more, .more:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 
 /* ---------- tablet ---------- */
 @media (max-width: 1180px) {
