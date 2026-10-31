@@ -71,6 +71,7 @@
       this.buckets = Array.from({ length: N }, () => []); this.hot = [];
       el.addEventListener('pointermove', e => {
         if (!this.ready) return;
+        if (REVEAL && !(this.alts0 && this.alts0[this.idx])) return;   // no twin: this plate stays still on the reveal page
         const r = this.cv.getBoundingClientRect();
         this.p.x = e.clientX - r.left; this.p.y = e.clientY - r.top; this.p.tk = 1; Engine.wake();
       });
