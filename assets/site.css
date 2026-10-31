@@ -73,9 +73,10 @@ p { text-wrap: pretty; }
 .drawer { display: none; }
 
 /* plates: a PNG at rest, a canvas on top only while something moves */
-.plate { position: relative; margin: 0; }
-.plate picture { display: block; width: 100%; height: 100%; }
-.plate img { width: 100%; height: 100%; object-fit: contain; }
+.plate { position: relative; margin: 0; min-width: 0; }
+/* the box takes its size from aspect-ratio alone; Safari otherwise lets the PNG's natural width stretch the grid */
+.plate picture { display: block; position: absolute; inset: 0; }
+.plate img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .plate-fx { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; filter: drop-shadow(0 0 6px rgba(250, 96, 51, .5)); }
 .plate.is-fx .plate-fx, .plate.is-moving .plate-fx { display: block; }
 .plate.is-moving img { visibility: hidden; }
@@ -150,11 +151,11 @@ html.figma .rheva { right: 0; }
 .level p { color: var(--graphite); font-size: 16px; }
 
 /* 02 AGENTS */
-.agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); position: relative; }
+.agent-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); position: relative; }
 .corner { position: absolute; font: 300 18px/1 var(--display); color: var(--taupe); width: 12px; text-align: center; }
 .corner.tl { left: -6px; top: -10px; } .corner.tr { right: -6px; top: -10px; }
 .corner.bl { left: -6px; bottom: -10px; } .corner.br { right: -6px; bottom: -10px; }
-.agent { display: flex; flex-direction: column; transition: background-color .5s; }
+.agent { display: grid; grid-template-rows: auto 1fr; align-content: start; transition: background-color .5s; }
 .agent + .agent { border-left: 1px solid var(--line); }
 .agent:hover { background: var(--cream); }
 .agent-plate { aspect-ratio: 1 / .9; margin: 28px 28px 0; }
@@ -349,7 +350,7 @@ a:hover .more .ic { transform: translateX(3px); }
   .sec-head.split { grid-template-columns: 1fr; gap: 20px; }
   .sec-head { margin-bottom: 56px; }
   .agent-grid { grid-template-columns: 1fr; }
-  .agent { display: grid; grid-template-columns: 280px 1fr; align-items: center; }
+  .agent { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: auto; align-items: center; }
   .agent + .agent { border-left: 0; border-top: 1px solid var(--line); }
   .agent-plate { margin: 20px; }
   .agent-body { padding: 24px 32px 24px 8px; }
